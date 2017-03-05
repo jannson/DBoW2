@@ -1,0 +1,8 @@
+build/
+cscope.files
+cscope.in.out
+cscope.out
+cscope.po.out
+demo/small_db.yml.gz
+demo/small_voc.yml.gz
+tags
