@@ -74,6 +74,9 @@ if(BUILD_Demo)
   file(COPY demo/images DESTINATION ${CMAKE_BINARY_DIR}/)
 endif(BUILD_Demo)
 
+add_executable(demo_orb demo/demo_orb.cpp)
+target_link_libraries(demo_orb ${PROJECT_NAME} ${OpenCV_LIBS} ${DLib_LIBS})
+
 configure_file(src/DBoW2.cmake.in
   "${PROJECT_BINARY_DIR}/DBoW2Config.cmake" @ONLY)
 

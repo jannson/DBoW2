@@ -11,13 +11,9 @@
 // DBoW2
 #include "DBoW2.h" // defines OrbVocabulary and OrbDatabase
 
-#include "DUtils.h"
-#include "DUtilsCV.h" // defines macros CVXX
-#include "DVision.h"
-
-// OpenCV
-#include <opencv/cv.h>
-#include <opencv/highgui.h>
+#include <DUtils/DUtils.h>
+#include <DVision/DVision.h>
+#include <DVision/ORB.h>
 
 //https://github.com/jannson/camodocal
 #define HAVE_OPENCV3
