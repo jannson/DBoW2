@@ -25,9 +25,9 @@ set(HDRS
   include/DBoW2/BowVector.h           include/DBoW2/FBrief.h              include/DBoW2/FSurf64.h
   include/DBoW2/QueryResults.h        include/DBoW2/TemplatedDatabase.h   include/DBoW2/FORB.h
   include/DBoW2/DBoW2.h               include/DBoW2/FClass.h              include/DBoW2/FeatureVector.h
-  include/DBoW2/ScoringObject.h       include/DBoW2/TemplatedVocabulary.h)
+  include/DBoW2/ScoringObject.h       include/DBoW2/TemplatedVocabulary.h include/DBoW2/FOrb2.h)
 set(SRCS 
-  src/BowVector.cpp     src/FBrief.cpp        src/FSurf64.cpp       src/FORB.cpp
+  src/BowVector.cpp     src/FBrief.cpp        src/FSurf64.cpp       src/FORB.cpp src/FOrb2.cpp
   src/FeatureVector.cpp src/QueryResults.cpp  src/ScoringObject.cpp)
 
 set(DEPENDENCY_DIR ${CMAKE_CURRENT_BINARY_DIR}/dependencies)
@@ -76,6 +76,9 @@ endif(BUILD_Demo)
 
 add_executable(demo_orb demo/demo_orb.cpp)
 target_link_libraries(demo_orb ${PROJECT_NAME} ${OpenCV_LIBS} ${DLib_LIBS})
+
+add_executable(demo_orb2 demo/demo_orb2.cpp)
+target_link_libraries(demo_orb2 ${PROJECT_NAME} ${OpenCV_LIBS} ${DLib_LIBS})
 
 configure_file(src/DBoW2.cmake.in
   "${PROJECT_BINARY_DIR}/DBoW2Config.cmake" @ONLY)

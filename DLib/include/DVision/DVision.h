@@ -62,6 +62,6 @@ namespace DVision
 // Epipolar geometry
 #include "FSolver.h"
 #include "HSolver.h"
-
+#include "ORB.h"
 
 #endif

@@ -1,28 +1,26 @@
 /**
  * File: Demo.cpp
  * Date: November 2011
- * Author: Dorian Galvez-Lopez
- * Description: demo application of DBoW2
- * License: see the LICENSE.txt file
+ * Author: Dorian Galvez-Lopez / Lionel Heng
+ * Description: demo application of DBoW2 modified to work with ORB
  */
 
-// explain:
-// http://www.cnblogs.com/luyb/p/6033196.html
-// http://blog.csdn.net/u010821666/article/details/52915238
 #include <iostream>
 #include <vector>
 
+#define HAVE_OPENCV3
+
 // DBoW2
-#include "DBoW2.h" // defines Surf64Vocabulary and Surf64Database
+#include "DBoW2.h" // defines OrbVocabulary2 and OrbDatabase2
 
-#include <DUtils/DUtils.h>
-#include <DVision/DVision.h>
+#include "DUtils.h"
+#include "DUtilsCV.h" // defines macros CVXX
+#include "DVision.h"
 
-// OpenCV
 #include <opencv2/core.hpp>
+#include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/xfeatures2d/nonfree.hpp>
-
 
 using namespace DBoW2;
 using namespace DUtils;
@@ -30,18 +28,17 @@ using namespace std;
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 
-void loadFeatures(vector<vector<cv::Mat > > &features);
-void testVocCreation(const vector<vector<cv::Mat > > &features);
-void testDatabase(const vector<vector<cv::Mat > > &features);
+void loadFeatures(vector<vector<DVision::ORB::bitset> > &features);
+void changeStructure(const cv::Mat &plain, vector<DVision::ORB::bitset> &out,
+  int L);
+void testVocCreation(const vector<vector<DVision::ORB::bitset> > &features);
+void testDatabase(const vector<vector<DVision::ORB::bitset> > &features);
 
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 
 // number of training images
 const int NIMAGES = 4;
-
-// extended surf gives 128-dimensional vectors
-const bool EXTENDED_SURF = false;
 
 // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 
@@ -55,7 +52,7 @@ void wait()
 
 int main()
 {
-  vector<vector<cv::Mat > > features;
+  vector<vector<DVision::ORB::bitset> > features;
   loadFeatures(features);
 
   testVocCreation(features);
@@ -69,41 +66,68 @@ int main()
 
 // ----------------------------------------------------------------------------
 
-void loadFeatures(vector<vector<cv::Mat > > &features)
+void loadFeatures(vector<vector<DVision::ORB::bitset> > &features)
 {
   features.clear();
   features.reserve(NIMAGES);
 
-  cv::Ptr<cv::ORB> orb = cv::ORB::create(2000, 1.02, 100);
+#ifdef HAVE_OPENCV3
+  cv::Ptr<cv::ORB> orb = cv::ORB::create(1000);
+#else // HAVE_OPENCV3
+  cv::Ptr<cv::ORB> orb = new cv::ORB(1000);
+#endif // HAVE_OPENCV3
 
-  cout << "Extracting SURF features..." << endl;
+  cout << "Extracting ORB features..." << endl;
   for(int i = 0; i < NIMAGES; ++i)
   {
     stringstream ss;
     ss << "images/image" << i << ".png";
 
-    cv::Mat image = cv::imread(ss.str(), cv::IMREAD_GRAYSCALE);
+    cv::Mat image = cv::imread(ss.str(), 0);
     cv::Mat mask;
     vector<cv::KeyPoint> keypoints;
     cv::Mat descriptors;
 
-    orb->detectAndCompute(image, mask, keypoints, descriptors); 
 
-    features.push_back(vector<cv::Mat >());
-    vector<cv::Mat > &plain = features.back();
-    size_t rows = descriptors.rows;
-    plain.reserve(rows);
-    for(size_t j = 0; j < rows; j++)
-    {
-	    plain.push_back(descriptors.row(j).clone());
-    }
-    cout << "sizes" << descriptors.size() << "cols" << descriptors.cols << "rows" << descriptors.rows << endl;
+#ifdef HAVE_OPENCV3
+    orb->detectAndCompute(image, mask, keypoints, descriptors);
+#else // HAVE_OPENCV3
+    (*orb)(image, mask, keypoints, descriptors);
+#endif // HAVE_OPENCV3
+
+    features.push_back(vector<DVision::ORB::bitset>());
+    changeStructure(descriptors, features.back(), orb->descriptorSize());
   }
 }
 
 // ----------------------------------------------------------------------------
 
-void testVocCreation(const vector<vector<cv::Mat > > &features)
+void changeStructure(const cv::Mat &plain, vector<DVision::ORB::bitset> &out,
+  int L)
+{
+  out.resize(plain.rows);
+
+  for(int i = 0; i < plain.rows; ++i)
+  {
+    DVision::ORB::bitset bitset(L * 8);
+
+    for(int j = 0; j < plain.cols; ++j)
+    {
+      unsigned char c = plain.at<unsigned char>(i,j);
+
+      for(int k = 0; k < 8; ++k)
+      {
+          bitset[j * 8 + k] = (c & 0x1);
+          c >>= 1;
+      }
+    }
+    out.at(i) = bitset;
+  }
+}
+
+// ----------------------------------------------------------------------------
+
+void testVocCreation(const vector<vector<DVision::ORB::bitset> > &features)
 {
   // branching factor and depth levels 
   const int k = 9;
@@ -111,7 +135,7 @@ void testVocCreation(const vector<vector<cv::Mat > > &features)
   const WeightingType weight = TF_IDF;
   const ScoringType score = L1_NORM;
 
-  OrbVocabulary voc(k, L, weight, score);
+  OrbVocabulary2 voc(k, L, weight, score);
 
   cout << "Creating a small " << k << "^" << L << " vocabulary..." << endl;
   voc.create(features);
@@ -143,15 +167,14 @@ void testVocCreation(const vector<vector<cv::Mat > > &features)
 
 // ----------------------------------------------------------------------------
 
-void testDatabase(const vector<vector<cv::Mat > > &features)
+void testDatabase(const vector<vector<DVision::ORB::bitset> > &features)
 {
   cout << "Creating a small database..." << endl;
 
   // load the vocabulary from disk
-  OrbVocabulary voc("small_voc.yml.gz");
+  OrbVocabulary2 voc("small_voc.yml.gz");
   
-  OrbDatabase db(voc, false, 0); // false = do not use direct index
-  // (so ignore the last param)
+  OrbDatabase2 db(voc, true, 0);
   // The direct index is useful if we want to retrieve the features that 
   // belong to some vocabulary node.
   // db creates a copy of the vocabulary, we may get rid of "voc" now
@@ -190,10 +213,11 @@ void testDatabase(const vector<vector<cv::Mat > > &features)
   
   // once saved, we can load it again  
   cout << "Retrieving database once again..." << endl;
-  OrbDatabase db2("small_db.yml.gz");
+  OrbDatabase2 db2("small_db.yml.gz");
   cout << "... done! This is: " << endl << db2 << endl;
 }
 
 // ----------------------------------------------------------------------------
+
 
 
